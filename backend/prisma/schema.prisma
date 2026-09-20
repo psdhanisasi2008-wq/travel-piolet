@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -73,7 +74,6 @@ model Trip {
   status          TripStatus        @default(PLANNING)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-
   preferences     TripPreference?
   constraints     TripConstraint?
   locations       Location[]
@@ -92,9 +92,9 @@ model TripPreference {
   id                 String   @id @default(uuid())
   tripId             String   @unique
   trip               Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  interests          String[] // ["food", "culture", "photography"]
+  interests          String[]
   travelPace         String   @default("balanced")
-  preferredTransport String[] // ["metro", "walking"]
+  preferredTransport String[]
   foodPreferences    String[]
   activityIntensity  String   @default("moderate")
 }
@@ -141,7 +141,6 @@ model Activity {
   openingTime     String           @default("08:00")
   closingTime     String           @default("21:00")
   image           String?
-
   itineraryItems  ItineraryItem[]
 }
 
@@ -189,21 +188,21 @@ model ItineraryItem {
 }
 
 model Booking {
-  id                String        @id @default(uuid())
-  tripId            String
-  trip              Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  type              BookingType
-  name              String
-  provider          String?
-  startTime         String
-  endTime           String
-  location          String
-  cost              Float         @default(0)
-  status            BookingStatus @default(CONFIRMED)
-  confirmationNum   String?
+  id                 String        @id @default(uuid())
+  tripId             String
+  trip               Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type               BookingType
+  name               String
+  provider           String?
+  startTime          String
+  endTime            String
+  location           String
+  cost               Float         @default(0)
+  status             BookingStatus @default(CONFIRMED)
+  confirmationNum    String?
   cancellationPolicy String?
-  impactAlert       String?
-  detailsJson       String?
+  impactAlert        String?
+  detailsJson        String?
 }
 
 model Expense {
@@ -242,7 +241,7 @@ model Disruption {
 model ReplanProposal {
   id                String      @id @default(uuid())
   tripId            String
-  trip              Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip              Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
   disruptionId      String?
   disruption        Disruption? @relation(fields: [disruptionId], references: [id])
   changesJson       String
@@ -254,20 +253,20 @@ model ReplanProposal {
 }
 
 model BackupPlan {
-  id                String   @id @default(uuid())
+  id               String   @id @default(uuid())
   tripId            String
-  trip              Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  category          String
+  trip             Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category         String
   primaryActivityId String?
-  primaryItem       String
-  primaryTime       String
-  backupActivityId  String?
-  backupItem        String
-  backupTime        String
-  reason            String
-  transportTimeMin  Int      @default(15)
-  cost              Float    @default(0)
-  status            String   @default("READY")
+  primaryItem      String
+  primaryTime      String
+  backupActivityId String?
+  backupItem       String
+  backupTime       String
+  reason           String
+  transportTimeMin Int      @default(15)
+  cost             Float    @default(0)
+  status           String   @default("READY")
 }
 
 model Notification {
@@ -294,11 +293,11 @@ model Conversation {
 }
 
 model ChatMessage {
-  id             String       @id @default(uuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         String       // "user" | "assistant"
-  text           String
+  id              String       @id @default(uuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          String
+  text            String
   contextDataJson String?
-  createdAt      DateTime     @default(now())
+  createdAt       DateTime     @default(now())
 }
