@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://travelpilot:travelpilot123@postgres:5432/travelpilot_db?schema=public
+      - JWT_SECRET=super-secret-travelpilot-jwt-key
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: travelpilot
+      POSTGRES_PASSWORD: travelpilot123
+      POSTGRES_DB: travelpilot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

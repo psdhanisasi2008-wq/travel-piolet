@@ -1,0 +1,304 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TripStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+}
+
+enum ItineraryItemStatus {
+  PLANNED
+  CONFIRMED
+  CANCELLED
+  MOVED
+  CONFLICT
+}
+
+enum BookingType {
+  FLIGHT
+  HOTEL
+  TRANSPORT
+  RESTAURANT
+  ACTIVITY
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  DELAYED
+}
+
+enum ActivityCategory {
+  FOOD
+  CULTURE
+  NATURE
+  SHOPPING
+  ENTERTAINMENT
+  PHOTOGRAPHY
+  HISTORY
+  TECHNOLOGY
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  trips         Trip[]
+  notifications Notification[]
+}
+
+model Trip {
+  id              String            @id @default(uuid())
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  destination     String
+  country         String            @default("Japan")
+  startDate       String
+  endDate         String
+  timezone        String            @default("Asia/Tokyo")
+  travelers       Int               @default(2)
+  budget          Float             @default(60000)
+  currency        String            @default("INR")
+  status          TripStatus        @default(PLANNING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  preferences     TripPreference?
+  constraints     TripConstraint?
+  locations       Location[]
+  activities      Activity[]
+  itineraries     Itinerary[]
+  bookings        Booking[]
+  expenses        Expense[]
+  disruptions     Disruption[]
+  replanProposals ReplanProposal[]
+  backups         BackupPlan[]
+  notifications   Notification[]
+  conversations   Conversation[]
+}
+
+model TripPreference {
+  id                 String   @id @default(uuid())
+  tripId             String   @unique
+  trip               Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  interests          String[] // ["food", "culture", "photography"]
+  travelPace         String   @default("balanced")
+  preferredTransport String[] // ["metro", "walking"]
+  foodPreferences    String[]
+  activityIntensity  String   @default("moderate")
+}
+
+model TripConstraint {
+  id                     String   @id @default(uuid())
+  tripId                 String   @unique
+  trip                   Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  budget                 Float    @default(60000)
+  maxDailyTravelMinutes  Int      @default(120)
+  maxWalkingDistance     Float    @default(5.0)
+  requiredActivities     String[]
+  excludedActivities     String[]
+  preferredStartTime     String   @default("08:00")
+  preferredEndTime       String   @default("21:00")
+}
+
+model Location {
+  id             String          @id @default(uuid())
+  tripId         String?
+  trip           Trip?           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name           String
+  address        String
+  latitude       Float
+  longitude      Float
+  city           String
+  country        String          @default("Japan")
+  activities     Activity[]
+  itineraryItems ItineraryItem[]
+}
+
+model Activity {
+  id              String           @id @default(uuid())
+  tripId          String?
+  trip            Trip?            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name            String
+  description     String
+  category        ActivityCategory
+  locationId      String
+  location        Location         @relation(fields: [locationId], references: [id])
+  durationMinutes Int              @default(120)
+  cost            Float            @default(0)
+  currency        String           @default("INR")
+  openingTime     String           @default("08:00")
+  closingTime     String           @default("21:00")
+  image           String?
+
+  itineraryItems  ItineraryItem[]
+}
+
+model Itinerary {
+  id        String         @id @default(uuid())
+  tripId    String
+  trip      Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  version   Int            @default(1)
+  status    String         @default("ACTIVE")
+  reason    String?        @default("Initial plan generated")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  days      ItineraryDay[]
+}
+
+model ItineraryDay {
+  id          String          @id @default(uuid())
+  itineraryId String
+  itinerary   Itinerary       @relation(fields: [itineraryId], references: [id], onDelete: Cascade)
+  date        String
+  dayNumber   Int
+  weather     String?         @default("24°C")
+  items       ItineraryItem[]
+}
+
+model ItineraryItem {
+  id                     String              @id @default(uuid())
+  dayId                  String
+  day                    ItineraryDay        @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  activityId             String?
+  activity               Activity?           @relation(fields: [activityId], references: [id])
+  title                  String
+  startTime              String
+  endTime                String
+  locationId             String?
+  location               Location?           @relation(fields: [locationId], references: [id])
+  travelTimeFromPrevious Int?                @default(15)
+  travelDistFromPrevious Float?              @default(2.5)
+  estimatedCost          Float               @default(0)
+  sequence               Int                 @default(1)
+  status                 ItineraryItemStatus @default(PLANNED)
+  bookingStatus          String              @default("confirmed")
+  conflictWarning        String?
+  notes                  String?
+}
+
+model Booking {
+  id                String        @id @default(uuid())
+  tripId            String
+  trip              Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type              BookingType
+  name              String
+  provider          String?
+  startTime         String
+  endTime           String
+  location          String
+  cost              Float         @default(0)
+  status            BookingStatus @default(CONFIRMED)
+  confirmationNum   String?
+  cancellationPolicy String?
+  impactAlert       String?
+  detailsJson       String?
+}
+
+model Expense {
+  id        String   @id @default(uuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  title     String
+  category  String
+  amount    Float
+  currency  String   @default("INR")
+  date      String
+  paid      Boolean  @default(true)
+  dayNumber Int      @default(1)
+  createdAt DateTime @default(now())
+}
+
+model Disruption {
+  id               String           @id @default(uuid())
+  tripId           String
+  trip             Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type             String
+  title            String
+  subtitle         String
+  severity         String           @default("high")
+  originalTime     String
+  newTime          String
+  applied          Boolean          @default(false)
+  detectedAt       String
+  impactsJson      String
+  currentTimeline  String
+  proposedTimeline String
+  createdAt        DateTime         @default(now())
+  replanProposals  ReplanProposal[]
+}
+
+model ReplanProposal {
+  id                String      @id @default(uuid())
+  tripId            String
+  trip              Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  disruptionId      String?
+  disruption        Disruption? @relation(fields: [disruptionId], references: [id])
+  changesJson       String
+  travelTimeChange  Int         @default(0)
+  costChange        Float       @default(0)
+  conflictsResolved Int         @default(0)
+  applied           Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+}
+
+model BackupPlan {
+  id                String   @id @default(uuid())
+  tripId            String
+  trip              Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  category          String
+  primaryActivityId String?
+  primaryItem       String
+  primaryTime       String
+  backupActivityId  String?
+  backupItem        String
+  backupTime        String
+  reason            String
+  transportTimeMin  Int      @default(15)
+  cost              Float    @default(0)
+  status            String   @default("READY")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  tripId    String?
+  trip      Trip?    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id        String        @id @default(uuid())
+  tripId    String
+  trip      Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime      @default(now())
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String       // "user" | "assistant"
+  text           String
+  contextDataJson String?
+  createdAt      DateTime     @default(now())
+}
